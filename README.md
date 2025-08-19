@@ -1,78 +1,82 @@
 # ROS 2 Humble Clean Setup (Ubuntu 22.04)
 
-This repository provides a single idempotent script to prepare a clean Ubuntu 22.04 (jammy) environment for ROS 2 Humble development without permanently polluting your default shell environment.
+A reproducible, beginner-friendly ROS 2 Humble setup on Ubuntu 22.04 (Jammy) that avoids environment interference and cache headaches.
 
-## Script
-`setup_ros2_humble_ubuntu22.sh`
+## What this gives you
+- **ROS 2 Humble (desktop)**: `rviz2`, `rqt`, demos, common tools
+- **Dev tools**: `colcon`, `vcstool`, `rosdep`
+- **Visualization extras**: `rqt-*`, `rqt-image-view`, `image-tools`, `plotjuggler-ros`, `turtlesim`
+- **Clean workspace**: `~/ros2_ws`
+- **No global sourcing** — environment stays clean
+- **Helpers** in `~/.bashrc`: `ros2shell` and `ros2ws`
+- **Hygiene**: journald limit, weekly apt autoclean, `~/bin/dev-clean.sh`
 
-Run it (safe to re-run):
+---
+
+## Quick start
 ```bash
+# Clone and run
+git clone https://github.com/<YOUR_GH_USERNAME>/ros2-clean-setup.git
+cd ros2-clean-setup
 bash setup_ros2_humble_ubuntu22.sh
+
+# Open a new terminal or reload shell
+source ~/.bashrc
 ```
 
-What it does:
-1. Verifies you are on Ubuntu 22.04 (jammy).
-2. Installs essential build & developer packages.
-3. Adds the official ROS 2 APT repository & key.
-4. Installs ROS 2 Humble desktop and core dev tools (colcon, rosdep, vcstool).
-5. Installs useful visualization & example tools (rqt suite, turtlesim, PlotJuggler, image tools).
-6. Creates an empty workspace at `~/ros2_ws` and performs an initial (tolerant) build.
-7. Adds two helper shell functions to `~/.bashrc` if not already present.
-8. Installs a `dev-clean.sh` utility script in `~/bin` to reclaim disk space & clean build artifacts.
-9. Applies light system hygiene (journal size, APT autoclean interval).
-
-## Helper Functions
-After running the script and opening a new terminal:
-
-- `ros2shell`
-  Opens a subshell with ROS 2 Humble and `~/ros2_ws` (if built) sourced. Exit that shell to leave the ROS 2 environment.
-
-- `ros2ws [optional_workspace_path]`
-  Sources ROS 2 Humble plus the specified (or default `~/ros2_ws`) workspace into the *current* shell.
-
-## Workspace Tips
-Create a sample package:
+### Daily usage (cheat sheet)
+Start a ROS session (default workspace):
 ```bash
-ros2shell   # or: ros2ws
-cd ~/ros2_ws/src
-ros2 pkg create --build-type ament_cmake demo_example
-colcon build
-ros2 run demo_example <node_name>
+ros2shell
 ```
-
-If you add packages, re-run:
+Leave the ROS environment (close terminal or):
+```bash
+exec bash -l
+```
+Create a second workspace (no interference):
+```bash
+mkdir -p ~/ros2_ws_nav/src
+cd ~/ros2_ws_nav
+colcon build
+```
+Use that workspace in a fresh terminal:
+```bash
+ros2ws ~/ros2_ws_nav
+```
+Build and run examples:
 ```bash
 cd ~/ros2_ws
-colcon build --symlink-install
+colcon build
+ros2 run demo_nodes_cpp talker
+rviz2
+```
+Verify ROS is loaded:
+```bash
+echo $ROS_DISTRO                      # -> humble
+echo $AMENT_PREFIX_PATH | tr ':' '\n' # top entry = active workspace
 ```
 
-## Cleaning Up
-Use the provided cleaner:
+Keep caches tidy — run the safe cleaner anytime:
 ```bash
 ~/bin/dev-clean.sh
 ```
-This removes apt/pip/npm/conda caches (if tools are installed), deletes old ROS logs, and purges `build/ install/ log/` in `~/ros2_ws`.
+It performs: apt clean, pip cache purge, optional npm & conda cache clean, removes `~/.ros/log/*`, and clears `build/ install/ log/` in `~/ros2_ws`.
 
-## Common Issues
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `>` secondary prompt while pasting | Unclosed heredoc in a manual paste | Use the provided complete script or ensure the terminating `EOF`/`EOF'` line is included |
-| `rosdep init` warning already initialized | Re-run of script | Ignore (script is idempotent) |
-| Missing workspace overlay | You haven't built yet | `cd ~/ros2_ws && colcon build` then re-run `ros2shell` or `ros2ws` |
+### One-time system limits (applied by the script)
+* Journald capped at 200MB
+* Weekly apt autoclean
 
-## Re-running Safely
-The script is idempotent: re-running will refresh apt metadata, ensure functions exist, and skip already-created artifacts where appropriate.
+### Notes to avoid interference
+* Do not globally source ROS in `~/.bashrc`.
+* Use `ros2shell` (default ws) or `ros2ws <path>` (specific ws).
+* One workspace per terminal.
+* Keep Conda off by default; use per-project envs if needed (not for ROS itself).
 
-## Minimal One-Liner (already done by the script)
+### Uninstall / reset (optional)
 ```bash
-bash setup_ros2_humble_ubuntu22.sh
+sudo apt purge -y 'ros-*' && sudo apt autoremove -y
+rm -rf ~/ros2_ws
 ```
-
-## Contributing
-Feel free to open issues or PRs for improvements (additional tools, robustness tweaks, etc.).
-
-## License
-No license file yet. If you plan to publish / share broadly, consider adding a permissive license (e.g., MIT or Apache-2.0).
 
 ---
 Happy robotics hacking!
